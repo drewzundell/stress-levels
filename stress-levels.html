@@ -1,0 +1,151 @@
+
+<h2 class="sr-only">Student stress survey dashboard showing average stress scores, college breakdown, and agree/disagree responses from 21 Syracuse University students.</h2>
+
+<style>
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 1.5rem; }
+.metric { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.75rem 1rem; }
+.metric-label { font-size: 12px; color: var(--color-text-secondary); margin: 0 0 4px; }
+.metric-value { font-size: 22px; font-weight: 500; color: var(--color-text-primary); margin: 0; }
+.section-title { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 1.5rem 0 0.75rem; }
+.chart-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; margin-bottom: 1.5rem; }
+@media (max-width: 520px) { .metric-grid { grid-template-columns: repeat(2,1fr); } .chart-row { grid-template-columns: 1fr; } }
+</style>
+
+<div class="metric-grid">
+  <div class="metric"><p class="metric-label">Responses</p><p class="metric-value">21</p></div>
+  <div class="metric"><p class="metric-label">Felt more stressed at college</p><p class="metric-value">19/21</p></div>
+  <div class="metric"><p class="metric-label">Have support system</p><p class="metric-value">18/21</p></div>
+  <div class="metric"><p class="metric-label">Actually use resources</p><p class="metric-value">7/21</p></div>
+</div>
+
+<p class="section-title">Avg stress score by topic (1 = low, 5 = high)</p>
+<div style="position: relative; width: 100%; height: 280px;">
+  <canvas id="stressBar" role="img" aria-label="Bar chart of average stress scores by topic. Course load and daily stress are highest.">Average scores range from about 2.3 to 3.4 across stress dimensions.</canvas>
+</div>
+
+<div class="chart-row" style="margin-top:1.5rem;">
+  <div>
+    <p class="section-title">Credit hours distribution</p>
+    <div style="position: relative; width: 100%; height: 200px;">
+      <canvas id="creditChart" role="img" aria-label="Pie chart of credit hour enrollment. 16-17 credits is most common.">Credit distribution across 4 ranges.</canvas>
+    </div>
+  </div>
+  <div>
+    <p class="section-title">Avg stress score by credit load</p>
+    <div style="position: relative; width: 100%; height: 200px;">
+      <canvas id="creditStressChart" role="img" aria-label="Bar chart comparing average stress score by credit hour range.">Higher credit loads correlate with higher stress.</canvas>
+    </div>
+  </div>
+</div>
+
+<p class="section-title">College breakdown (respondents)</p>
+<div style="position: relative; width: 100%; height: 220px;">
+  <canvas id="collegeChart" role="img" aria-label="Horizontal bar chart of respondents by college. Whitman and Falk are most represented.">College distribution among 21 respondents.</canvas>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const raw = [
+  {age:"18-19",ec:true,credits:"16-17",job:false,expenses:"No",college:"Arts ans Sciences",scores:[5,3,4,2,2,3,2,2,2],moreStressed:true,resources:false,utilizes:false,healthy:false,normal:false,support:true,enjoys:true},
+  {age:"18-19",ec:true,credits:"14-15",job:false,expenses:"Some",college:"Whitman",scores:[4,3,4,3,2,5,5,2,3],moreStressed:true,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"18-19",ec:true,credits:"12-13",job:false,expenses:"Some",college:"Whitman",scores:[4,4,3,2,4,3,3,2,1],moreStressed:true,resources:true,utilizes:true,healthy:true,normal:true,support:true,enjoys:false},
+  {age:"20-21",ec:true,credits:"12-13",job:false,expenses:"No",college:"Whitman",scores:[4,4,5,5,4,4,3,3,4],moreStressed:true,resources:true,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"20-21",ec:false,credits:"16-17",job:true,expenses:"Yes",college:"Arts ans Sciences",scores:[4,3,4,2,4,4,5,3,3],moreStressed:true,resources:true,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"22-23",ec:true,credits:"12 or less",job:true,expenses:"Some",college:"Whitman",scores:[3,3,2,4,1,4,3,2,2],moreStressed:true,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"18-19",ec:true,credits:"16-17",job:false,expenses:"Some",college:"iSchool",scores:[4,3,3,1,2,2,4,2,1],moreStressed:true,resources:false,utilizes:false,healthy:false,normal:false,support:true,enjoys:true},
+  {age:"18-19",ec:true,credits:"16-17",job:false,expenses:"Yes",college:"Whitman",scores:[3,2,3,2,3,3,2,2,2],moreStressed:true,resources:true,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"18-19",ec:true,credits:"16-17",job:false,expenses:"Some",college:"Falk",scores:[3,4,2,2,3,4,3,1,3],moreStressed:true,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"18-19",ec:true,credits:"14-15",job:false,expenses:"Some",college:"Arts ans Sciences",scores:[4,4,4,3,4,2,3,3,2],moreStressed:false,resources:false,utilizes:false,healthy:false,normal:false,support:true,enjoys:true},
+  {age:"22-23",ec:true,credits:"12 or less",job:true,expenses:"Yes",college:"Maxwell",scores:[4,2,2,4,1,4,3,3,4],moreStressed:true,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"20-21",ec:true,credits:"16-17",job:false,expenses:"No",college:"Whitman",scores:[2,3,1,3,3,4,4,4,5],moreStressed:false,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"18-19",ec:true,credits:"16-17",job:false,expenses:"Some",college:"Falk",scores:[4,4,3,3,3,3,3,2,3],moreStressed:true,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"22-23",ec:false,credits:"12 or less",job:false,expenses:"No",college:"Whitman",scores:[5,4,5,4,3,1,5,3,2],moreStressed:true,resources:false,utilizes:false,healthy:false,normal:false,support:false,enjoys:false},
+  {age:"22-23",ec:true,credits:"12 or less",job:false,expenses:"Some",college:"Falk",scores:[2,1,1,1,1,1,1,1,1],moreStressed:true,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"22-23",ec:true,credits:"12 or less",job:true,expenses:"Yes",college:"Falk",scores:[1,1,1,1,1,1,1,1,1],moreStressed:true,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"20-21",ec:true,credits:"16-17",job:false,expenses:"No",college:"Arts ans Sciences",scores:[2,1,1,2,3,1,1,1,1],moreStressed:true,resources:true,utilizes:true,healthy:true,normal:true,support:true,enjoys:false},
+  {age:"18-19",ec:true,credits:"16-17",job:false,expenses:"Yes",college:"Newhouse",scores:[3,2,2,1,2,1,3,1,4],moreStressed:false,resources:false,utilizes:false,healthy:true,normal:true,support:false,enjoys:true},
+  {age:"20-21",ec:true,credits:"14-15",job:false,expenses:"Some",college:"VPA",scores:[3,2,1,2,3,3,1,3,2],moreStressed:true,resources:false,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"18-19",ec:true,credits:"16-17",job:false,expenses:"No",college:"Falk",scores:[2,3,3,4,2,2,3,2,2],moreStressed:true,resources:true,utilizes:true,healthy:true,normal:true,support:true,enjoys:true},
+  {age:"20-21",ec:true,credits:"12-13",job:false,expenses:"Yes",college:"Arts ans Sciences",scores:[4,2,2,1,1,1,4,2,2],moreStressed:true,resources:false,utilizes:false,healthy:false,normal:false,support:false,enjoys:true}
+];
+
+const labels = ["Daily stress","Overwhelmed","Hard to relax","Difficult to sleep","Course load stress","Not enough time","Outside responsibilities","Basic needs trouble","No time to socialize"];
+const avgScores = labels.map((_,i) => {
+  const vals = raw.map(r => r.scores[i]);
+  return Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*10)/10;
+});
+
+const colors = ['#378ADD','#378ADD','#378ADD','#5DCAA5','#D85A30','#D85A30','#BA7517','#A32D2D','#7F77DD'];
+
+new Chart(document.getElementById('stressBar'), {
+  type: 'bar',
+  data: {
+    labels: labels.map(l => l.length > 22 ? l.slice(0,22)+'…' : l),
+    datasets: [{ data: avgScores, backgroundColor: colors, borderRadius: 4, borderSkipped: false }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => labels[items[0].dataIndex] } } },
+    scales: {
+      x: { ticks: { font: { size: 11 }, color: '#888' }, grid: { display: false } },
+      y: { min: 0, max: 5, ticks: { stepSize: 1, color: '#888', font: { size: 11 } }, grid: { color: 'rgba(128,128,128,0.1)' } }
+    }
+  }
+});
+
+const creditOrder = ["12 or less","12-13","14-15","16-17"];
+const creditCounts = creditOrder.map(c => raw.filter(r => r.credits === c).length);
+new Chart(document.getElementById('creditChart'), {
+  type: 'doughnut',
+  data: {
+    labels: creditOrder,
+    datasets: [{ data: creditCounts, backgroundColor: ['#B5D4F4','#378ADD','#185FA5','#0C447C'], borderWidth: 2, borderColor: 'transparent' }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, color: '#888', boxWidth: 10 } } }
+  }
+});
+
+const creditAvgStress = creditOrder.map(c => {
+  const group = raw.filter(r => r.credits === c);
+  if (!group.length) return 0;
+  const allScores = group.flatMap(r => r.scores);
+  return Math.round((allScores.reduce((a,b)=>a+b,0)/allScores.length)*10)/10;
+});
+new Chart(document.getElementById('creditStressChart'), {
+  type: 'bar',
+  data: {
+    labels: creditOrder,
+    datasets: [{ data: creditAvgStress, backgroundColor: ['#B5D4F4','#5DCAA5','#EF9F27','#D85A30'], borderRadius: 4, borderSkipped: false }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { font: { size: 11 }, color: '#888' }, grid: { display: false } },
+      y: { min: 0, max: 5, ticks: { stepSize: 1, color: '#888', font: { size: 11 } }, grid: { color: 'rgba(128,128,128,0.1)' } }
+    }
+  }
+});
+
+const colleges = [...new Set(raw.map(r => r.college))];
+const collegeCounts = colleges.map(c => raw.filter(r => r.college === c).length);
+const sorted = colleges.map((c,i) => ({c, n: collegeCounts[i]})).sort((a,b) => a.n - b.n);
+new Chart(document.getElementById('collegeChart'), {
+  type: 'bar',
+  data: {
+    labels: sorted.map(x => x.c),
+    datasets: [{ data: sorted.map(x => x.n), backgroundColor: '#7F77DD', borderRadius: 4, borderSkipped: false }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { stepSize: 1, color: '#888', font: { size: 11 } }, grid: { color: 'rgba(128,128,128,0.1)' } },
+      y: { ticks: { color: '#888', font: { size: 11 } }, grid: { display: false } }
+    }
+  }
+});
+</script>
